@@ -1,6 +1,6 @@
 {
   "name": "uconsul",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "consul http sdk",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

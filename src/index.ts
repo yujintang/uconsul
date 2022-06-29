@@ -25,7 +25,7 @@ let globalOpt: initOpt = {
 export async function init(customOpt: initOpt) {
     globalOpt = mergeOpt(customOpt)
     if (globalOpt.DmlConsulUrl != "") {
-        globalOpt.Urls = await ResolveUrls()
+        await ResolveUrls()
     }
     if (globalOpt.MultipleCount > globalOpt.Urls.length) {
         throw new Error('MultipleCount 不能大于 Urls 长度')
@@ -257,7 +257,8 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
             return resultErr('Name must reg /^[a-zA-Z0-9\_\-]{3,}$/')
         }
         params.Name = params.Name.toLowerCase()
-        params.ID = `${opt.Namespace}${opt.NamespaceDelimiter}${params.Name}${opt.NamespaceDelimiter}` + crypto.createHmac('md5', '').update(`${params.Address}_${params.Port}`).digest('base64').slice(0, 16).toUpperCase().replace(/\+/g, 'I').replace(/\//g, 'J').replace(/\=/g, 'k')
+        params.Name = addNs(params.Name, opt.NamespaceDelimiter, opt)
+        params.ID = `${params.Name}${opt.NamespaceDelimiter}` + crypto.createHmac('md5', '').update(`${params.Address}_${params.Port}`).digest('base64').slice(0, 16).toUpperCase().replace(/\+/g, 'I').replace(/\//g, 'J').replace(/\=/g, 'k')
         if (!params.Tags) {
             params.Tags = []
         }
@@ -293,7 +294,6 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
             method: 'put',
             data: {
                 ...params,
-                Name: addNs(params.Name, opt.NamespaceDelimiter, opt)
             }
         }, opt), 1)
 
