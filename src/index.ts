@@ -6,6 +6,7 @@ import path from "path";
 import chalk from 'chalk';
 import cron from 'node-cron';
 import { env } from 'process';
+import dayjs from 'dayjs';
 
 let isInit = false
 
@@ -262,7 +263,7 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
         if (!params.Tags) {
             params.Tags = []
         }
-        params.Tags = [params.Name, params.ID, `${params.Address}:${params.Port}`, opt.SdkAgent || "", ...params.Tags]
+        params.Tags = [params.Name, params.ID, `${params.Address}:${params.Port}`, opt.SdkAgent || "", dayjs().format("YYYY-MM-DD HH:mm:ss"), ...params.Tags]
         if (!params.Check.Interval) {
             params.Check.Interval = '1s'
         }
