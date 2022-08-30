@@ -10,7 +10,7 @@ import dayjs from 'dayjs';
 
 let isInit = false
 
-let globalOpt: initOpt = {
+let globalOpt: Required<initOpt> = {
     DmlConsulUrl: process.env.DML_CONSUL_URL || '',
     Namespace: process.env.DML_CONSUL_NAMESPACE || 'default',
     Token: process.env.DML_CONSUL_TOKEN || '',
@@ -20,7 +20,8 @@ let globalOpt: initOpt = {
     MultipleCount: 1,
     SdkAgent: "nodejsSdk",
     NamespaceDelimiter: '_',
-    CheckServiceName: true
+    CheckServiceName: true,
+    Throw: false
 }
 
 export async function init(customOpt: initOpt) {
@@ -70,7 +71,7 @@ function log(...str: any[]) {
     console.info(chalk.magenta('dml-consul: '), chalk.cyan(str.join('')))
 }
 
-function mergeOpt(customOpt?: initOpt): initOpt {
+function mergeOpt(customOpt?: initOpt): Required<initOpt> {
     const opt = _.merge(globalOpt, customOpt)
 
     if (opt.Namespace.includes('.')) {
@@ -98,7 +99,7 @@ function delNs(str: string, delimiter: string, opt: initOpt): string {
     return str
 }
 
-function baseRequest(axiosEntity: AxiosRequestConfig, opt: initOpt): Promise<any>[] {
+function baseRequest(axiosEntity: AxiosRequestConfig, opt: Required<initOpt>): Promise<any>[] {
     if (!isInit) {
         throw new Error("Must await init()!")
     }
@@ -186,7 +187,11 @@ export async function ServiceList(params: ServiceListReq, customOpt?: initOpt): 
         }
         return resultOk(result)
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res 
     }
 }
 
@@ -237,7 +242,11 @@ export async function ServiceInfo(params: ServiceInfoReq, customOpt?: initOpt): 
                 , function (o: any) { return !criticalObj[o.ID] })
         )
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -301,7 +310,11 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
         log(chalk.blue('\nService Register Success!'))
         return resultOk(_.pick(params, ['ID', 'Name', 'Address', 'Port']))
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -342,7 +355,11 @@ export async function ServiceDel(params: ServiceDelReq, customOpt?: initOpt): Pr
         }
         return resultOk(IdArr)
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -368,7 +385,11 @@ export async function KvInfo(params: GetKvReq, customOpt?: initOpt): Promise<com
             Value: consulData
         })
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -401,7 +422,11 @@ export async function KvList(params: GetKvReq, customOpt?: initOpt): Promise<com
         }
         return resultOk(result)
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -434,7 +459,11 @@ export async function KvUpSert(params: KvUpSertReq, customOpt?: initOpt): Promis
         }
         return resultOk({})
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -459,7 +488,11 @@ export async function KvDel(params: KvDelReq, customOpt?: initOpt): Promise<comm
         }
         return resultOk({})
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -484,7 +517,11 @@ export async function KvTreeDel(params: KvTreeDelReq, customOpt?: initOpt): Prom
         }
         return resultOk({})
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -528,7 +565,11 @@ export async function CheckList(params: CheckListReq, customOpt?: initOpt): Prom
         }
         return resultOk(result)
     } catch (e: any) {
-        return e[0] || resultErr(e.message, e)
+        const res = e[0] || resultErr(e.message, e)
+        if (globalOpt.Throw){
+            throw res.Message
+        }
+        return res
     }
 }
 
@@ -538,12 +579,13 @@ interface initOpt {
     CronExpression?: string // 定时刷新consul nodes
     Namespace: string // 命名空间
     Token: string // consul 访问token
-    Urls: string[] // consul nodes
+    Urls?: string[] // consul nodes
     Timeout?: number // 访问超时时间
-    MultipleCount: number // 最小注册量
+    MultipleCount?: number // 最小注册量
     SdkAgent?: string // 标识
-    NamespaceDelimiter: string // 命名空间分割符
+    NamespaceDelimiter?: string // 命名空间分割符
     CheckServiceName?: boolean // 检查服务名称是否合法, 用于服务发现
+    Throw?: boolean
 }
 interface ServiceListReq {
     NameFilter?: string
