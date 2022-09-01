@@ -21,11 +21,12 @@ let globalOpt: Required<initOpt> = {
     SdkAgent: "nodejsSdk",
     NamespaceDelimiter: '_',
     CheckServiceName: true,
-    Throw: false
+    Throw: false,
+    ShowLog: true
 }
 
 export async function init(customOpt: initOpt) {
-    if (isInit){
+    if (isInit) {
         return
     }
     globalOpt = mergeOpt(customOpt)
@@ -35,11 +36,13 @@ export async function init(customOpt: initOpt) {
     if (globalOpt.MultipleCount > globalOpt.Urls.length) {
         throw new Error('MultipleCount 不能大于 Urls 长度')
     }
-    log('Namespace:     ', globalOpt.Namespace)
-    log('Domain:        ', globalOpt.DmlConsulUrl)
-    log('Urls:          ', globalOpt.Urls)
-    log('Timeout:       ', globalOpt.Timeout)
-    log('MultipleCount: ', globalOpt.MultipleCount)
+    if (globalOpt.ShowLog) {
+        log('Namespace:     ', globalOpt.Namespace)
+        log('Domain:        ', globalOpt.DmlConsulUrl)
+        log('Urls:          ', globalOpt.Urls)
+        log('Timeout:       ', globalOpt.Timeout)
+        log('MultipleCount: ', globalOpt.MultipleCount)
+    }
     isInit = true
     if (customOpt.CronExpression && globalOpt.DmlConsulUrl != "") {
         if (!cron.validate(customOpt.CronExpression)) {
@@ -191,10 +194,10 @@ export async function ServiceList(params: ServiceListReq, customOpt?: initOpt): 
         return resultOk(result)
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
-        return res 
+        return res
     }
 }
 
@@ -246,7 +249,7 @@ export async function ServiceInfo(params: ServiceInfoReq, customOpt?: initOpt): 
         )
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -282,24 +285,28 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
         if (!params.Check.Status) {
             params.Check.Status = 'passing'
         }
-
-        console.log()
-        log(chalk.yellow("Register Service..."))
-        log('ID:            ', params.ID)
-        log('Name:          ', params.Name)
-        log('Address:       ', params.Address)
-        log('Port:          ', params.Port)
-        log('Check.Interval:', params.Check.Interval)
-        if (params.Check.Http) {
-            log('Check.Http:    ', params.Check.Http)
+        if (!params.Check.Http && !params.Check.TCP) {
+            return resultErr('Lost Check.Http or Check.TCP')
         }
-        if (params.Check.TCP) {
-            log('Check.TCP:     ', params.Check.TCP)
-        }
+        if (opt.ShowLog) {
+            console.log()
+            log(chalk.yellow("Register Service..."))
+            log('ID:            ', params.ID)
+            log('Name:          ', params.Name)
+            log('Address:       ', params.Address)
+            log('Port:          ', params.Port)
+            log('Check.Interval:', params.Check.Interval)
+            if (params.Check.Http) {
+                log('Check.Http:    ', params.Check.Http)
+            }
+            if (params.Check.TCP) {
+                log('Check.TCP:     ', params.Check.TCP)
+            }
 
-        if (params.Address.includes('127.0.0.1') || params.Address.includes('localhost')) {
-            log(chalk.red('Address 为本地地址,取消注册!'))
-            return resultOk(_.pick(params, ['ID', 'Name', 'Address', 'Port']), 'Address 为本地地址,取消注册')
+            if (params.Address.includes('127.0.0.1') || params.Address.includes('localhost')) {
+                log(chalk.red('Address 为本地地址,取消注册!'))
+                return resultOk(_.pick(params, ['ID', 'Name', 'Address', 'Port']), 'Address 为本地地址,取消注册')
+            }
         }
 
         await bluebird.some(baseRequest({
@@ -310,11 +317,14 @@ export async function ServiceAdd(params: ServiceAddReq, customOpt?: initOpt): Pr
             }
         }, opt), 1)
 
-        log(chalk.blue('\nService Register Success!'))
+        if(opt.ShowLog){
+            log(chalk.blue('\nService Register Success!'))
+        }
+        
         return resultOk(_.pick(params, ['ID', 'Name', 'Address', 'Port']))
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -359,7 +369,7 @@ export async function ServiceDel(params: ServiceDelReq, customOpt?: initOpt): Pr
         return resultOk(IdArr)
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -389,7 +399,7 @@ export async function KvInfo(params: GetKvReq, customOpt?: initOpt): Promise<com
         })
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -426,7 +436,7 @@ export async function KvList(params: GetKvReq, customOpt?: initOpt): Promise<com
         return resultOk(result)
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -463,7 +473,7 @@ export async function KvUpSert(params: KvUpSertReq, customOpt?: initOpt): Promis
         return resultOk({})
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -492,7 +502,7 @@ export async function KvDel(params: KvDelReq, customOpt?: initOpt): Promise<comm
         return resultOk({})
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -521,7 +531,7 @@ export async function KvTreeDel(params: KvTreeDelReq, customOpt?: initOpt): Prom
         return resultOk({})
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -569,7 +579,7 @@ export async function CheckList(params: CheckListReq, customOpt?: initOpt): Prom
         return resultOk(result)
     } catch (e: any) {
         const res = e[0] || resultErr(e.message, e)
-        if (globalOpt.Throw){
+        if (globalOpt.Throw) {
             throw res.Message
         }
         return res
@@ -588,7 +598,8 @@ interface initOpt {
     SdkAgent?: string // 标识
     NamespaceDelimiter?: string // 命名空间分割符
     CheckServiceName?: boolean // 检查服务名称是否合法, 用于服务发现
-    Throw?: boolean
+    Throw?: boolean // 是否抛出错误
+    ShowLog?: boolean // 是否打印日志
 }
 interface ServiceListReq {
     NameFilter?: string
