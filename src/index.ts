@@ -25,6 +25,9 @@ let globalOpt: Required<initOpt> = {
 }
 
 export async function init(customOpt: initOpt) {
+    if (isInit){
+        return
+    }
     globalOpt = mergeOpt(customOpt)
     if (globalOpt.DmlConsulUrl != "") {
         await ResolveUrls()
