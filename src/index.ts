@@ -1,4 +1,5 @@
 import axios, { AxiosRequestConfig } from 'axios'
+import { resolveRefs } from 'json-refs';
 import _ from 'lodash'
 import bluebird from 'bluebird'
 import crypto from 'crypto';
@@ -22,7 +23,8 @@ let globalOpt: Required<initOpt> = {
     NamespaceDelimiter: '_',
     CheckServiceName: true,
     Throw: false,
-    ShowLog: true
+    ShowLog: true,
+    RefKey: 'common'
 }
 
 export async function init(customOpt: initOpt) {
@@ -389,10 +391,58 @@ export async function KvInfo(params: GetKvReq, customOpt?: initOpt): Promise<com
             url: path.join('/v1/kv/', encodeURIComponent(addNs(params.Key, '/', opt))),
             method: 'get',
         }, opt))
-        let consulData = Buffer.from(data[0].Value, 'base64').toString();
+        let consulDataStr = Buffer.from(data[0].Value, 'base64').toString();
+        let consulData = consulDataStr
         if (params.JsonParse) {
             consulData = JSON.parse(consulData)
         }
+        // 解析$ref
+        if (consulDataStr.includes('$ref')) {
+            const { data } = await bluebird.any(baseRequest({
+                url: path.join('/v1/kv/', encodeURIComponent(addNs(opt.RefKey, '/', opt))),
+                method: 'get',
+                params: {
+                    recurse: true
+                }
+            }, opt))
+
+            let result: { [key: string]: any } = {}
+            for (const { Key, Value } of data) {
+                if (![null, '', undefined].includes(Value)) {
+                    let consulData = Buffer.from(Value, 'base64').toString();
+                    if (true) {
+                        try {
+                            consulData = JSON.parse(consulData)
+                        } catch (e) {}
+                    }
+                    //解析key
+                    let currentObj = result;
+                    const key = delNs(Key, '/', opt)
+                    const segments = key.split('/')
+                    for (let i = 0; i < segments.length; i++) {
+                        const segment = segments[i];
+                        const isLastSegment = i === segments.length - 1;
+                        if (isLastSegment) {
+                            currentObj[segment] = consulData;
+                        } else {
+                            if(!currentObj[segment]){
+                                currentObj[segment] = {};
+                            }
+                            currentObj = currentObj[segment];
+                        }
+                    }
+                }
+            }
+
+            let rootObject: { [key: string]: any } = {
+                ...result,
+                self: consulData
+            }
+            const resolveResponse = await resolveRefs(rootObject, {})
+            // @ts-ignore
+            consulData = resolveResponse.resolved.self
+        }
+
         return resultOk({
             ..._.omit(data[0], ['Key', 'Flags']),
             Value: consulData
@@ -427,9 +477,11 @@ export async function KvList(params: GetKvReq, customOpt?: initOpt): Promise<com
         for (const { Key, Value } of data) {
             if (![null, '', undefined].includes(Value)) {
                 let consulData = Buffer.from(Value, 'base64').toString();
-                if (params.JsonParse) {
-                    consulData = JSON.parse(consulData)
-                }
+                try{
+                    if (params.JsonParse) {
+                        consulData = JSON.parse(consulData)
+                    }
+                }catch(e){}
                 result[delNs(Key, '/', opt)] = consulData
             }
         }
@@ -600,6 +652,7 @@ interface initOpt {
     CheckServiceName?: boolean // 检查服务名称是否合法, 用于服务发现
     Throw?: boolean // 是否抛出错误
     ShowLog?: boolean // 是否打印日志
+    RefKey: string // ref路径
 }
 interface ServiceListReq {
     NameFilter?: string
